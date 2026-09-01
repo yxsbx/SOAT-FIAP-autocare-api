@@ -45,5 +45,8 @@ jobs:
         run: aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }} --region ${{ secrets.AWS_REGION }}
       - name: Deploy API
         run: |
+          kubectl -n autocarehub set env deployment/autocarehub-api \
+            NEW_RELIC_LICENSE_KEY=${{ secrets.NEW_RELIC_LICENSE_KEY }} \
+            NEW_RELIC_APP_NAME="AutoCare Hub API ${{ github.ref_name }}"
           kubectl -n autocarehub set image deployment/autocarehub-api api=${{ secrets.ECR_REGISTRY }}/autocarehub-api:${{ github.sha }}
           kubectl -n autocarehub rollout status deployment/autocarehub-api --timeout=180s

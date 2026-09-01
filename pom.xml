@@ -30,6 +30,7 @@
         <lombok.version>1.18.46</lombok.version>
         <spotless.version>2.44.4</spotless.version>
         <maven-compiler.version>3.14.0</maven-compiler.version>
+        <logstash-logback-encoder.version>8.0</logstash-logback-encoder.version>
     </properties>
     <dependencies>
         <dependency>
@@ -53,8 +54,18 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
         <dependency>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+            <version>${logstash-logback-encoder.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+            <version>${logstash-logback-encoder.version}</version>
         </dependency>
         <dependency>
             <groupId>org.flywaydb</groupId>
@@ -373,3 +384,7 @@
         </profile>
     </profiles>
 </project>
+
+
+
+

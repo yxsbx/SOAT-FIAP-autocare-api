@@ -13,6 +13,7 @@ import br.com.autocarehub.application.usecase.serviceorder.ListServiceOrdersUseC
 import br.com.autocarehub.application.usecase.serviceorder.TrackServiceOrderUseCase;
 import br.com.autocarehub.application.usecase.serviceorder.UpdateServiceOrderStatusUseCase;
 import br.com.autocarehub.domain.model.ServiceOrder;
+import br.com.autocarehub.infrastructure.observability.ServiceOrderMetrics;
 import br.com.autocarehub.infrastructure.security.ExternalServiceTokenVerifier;
 import br.com.autocarehub.interfaces.rest.generated.api.ServiceOrdersApi;
 import br.com.autocarehub.interfaces.rest.generated.model.AddServiceOrderPartRequest;
@@ -52,6 +53,7 @@ public class ServiceOrdersController implements ServiceOrdersApi {
     private final GetAverageServiceOrderExecutionTimeUseCase getAverageServiceOrderExecutionTimeUseCase;
     private final TrackServiceOrderUseCase trackServiceOrderUseCase;
     private final ExternalServiceTokenVerifier externalServiceTokenVerifier;
+    private final ServiceOrderMetrics serviceOrderMetrics;
 
     public ServiceOrdersController(
             CreateServiceOrderUseCase createServiceOrderUseCase,
@@ -66,7 +68,8 @@ public class ServiceOrdersController implements ServiceOrdersApi {
             ListServiceOrdersByCustomerUseCase listServiceOrdersByCustomerUseCase,
             GetAverageServiceOrderExecutionTimeUseCase getAverageServiceOrderExecutionTimeUseCase,
             TrackServiceOrderUseCase trackServiceOrderUseCase,
-            ExternalServiceTokenVerifier externalServiceTokenVerifier) {
+            ExternalServiceTokenVerifier externalServiceTokenVerifier,
+            ServiceOrderMetrics serviceOrderMetrics) {
         this.createServiceOrderUseCase = createServiceOrderUseCase;
         this.findServiceOrderUseCase = findServiceOrderUseCase;
         this.listServiceOrdersUseCase = listServiceOrdersUseCase;
@@ -80,6 +83,7 @@ public class ServiceOrdersController implements ServiceOrdersApi {
         this.getAverageServiceOrderExecutionTimeUseCase = getAverageServiceOrderExecutionTimeUseCase;
         this.trackServiceOrderUseCase = trackServiceOrderUseCase;
         this.externalServiceTokenVerifier = externalServiceTokenVerifier;
+        this.serviceOrderMetrics = serviceOrderMetrics;
     }
 
     @Override
@@ -131,9 +135,15 @@ public class ServiceOrdersController implements ServiceOrdersApi {
     @Override
     public ResponseEntity<ServiceOrderResponse> createServiceOrder(
             CreateServiceOrderRequest createServiceOrderRequest) {
-        ServiceOrder serviceOrder =
-                createServiceOrderUseCase.execute(ServiceOrderRestMapper.toCommand(createServiceOrderRequest));
-        return ResponseEntity.status(HttpStatus.CREATED).body(ServiceOrderRestMapper.toResponse(serviceOrder));
+        try {
+            ServiceOrder serviceOrder =
+                    createServiceOrderUseCase.execute(ServiceOrderRestMapper.toCommand(createServiceOrderRequest));
+            serviceOrderMetrics.created(serviceOrder);
+            return ResponseEntity.status(HttpStatus.CREATED).body(ServiceOrderRestMapper.toResponse(serviceOrder));
+        } catch (RuntimeException exception) {
+            serviceOrderMetrics.processingFailed("create", exception);
+            throw exception;
+        }
     }
 
     @Override
@@ -193,9 +203,15 @@ public class ServiceOrdersController implements ServiceOrdersApi {
     @Override
     public ResponseEntity<ServiceOrderResponse> updateServiceOrderStatus(
             UUID serviceOrderId, UpdateServiceOrderStatusRequest updateServiceOrderStatusRequest) {
-        ServiceOrder serviceOrder = updateServiceOrderStatusUseCase.execute(
-                ServiceOrderRestMapper.toCommand(serviceOrderId, updateServiceOrderStatusRequest));
-        return ResponseEntity.ok(ServiceOrderRestMapper.toResponse(serviceOrder));
+        try {
+            ServiceOrder serviceOrder = updateServiceOrderStatusUseCase.execute(
+                    ServiceOrderRestMapper.toCommand(serviceOrderId, updateServiceOrderStatusRequest));
+            serviceOrderMetrics.statusChanged(serviceOrder);
+            return ResponseEntity.ok(ServiceOrderRestMapper.toResponse(serviceOrder));
+        } catch (RuntimeException exception) {
+            serviceOrderMetrics.processingFailed("status-update", exception);
+            throw exception;
+        }
     }
 
     @Override
@@ -204,9 +220,15 @@ public class ServiceOrdersController implements ServiceOrdersApi {
             @Nullable String xExternalServiceToken,
             ExternalStatusUpdateRequest externalStatusUpdateRequest) {
         externalServiceTokenVerifier.verify(xExternalServiceToken);
-        ServiceOrder serviceOrder = updateServiceOrderStatusUseCase.execute(
-                ServiceOrderRestMapper.toCommand(serviceOrderId, externalStatusUpdateRequest));
-        return ResponseEntity.ok(ServiceOrderRestMapper.toResponse(serviceOrder));
+        try {
+            ServiceOrder serviceOrder = updateServiceOrderStatusUseCase.execute(
+                    ServiceOrderRestMapper.toCommand(serviceOrderId, externalStatusUpdateRequest));
+            serviceOrderMetrics.statusChanged(serviceOrder);
+            return ResponseEntity.ok(ServiceOrderRestMapper.toResponse(serviceOrder));
+        } catch (RuntimeException exception) {
+            serviceOrderMetrics.processingFailed("external-status-update", exception);
+            throw exception;
+        }
     }
 
     @Override
@@ -221,3 +243,5 @@ public class ServiceOrdersController implements ServiceOrdersApi {
                 new TrackServiceOrderUseCase.Query(serviceOrderId, customerDocument, plate))));
     }
 }
+
+
