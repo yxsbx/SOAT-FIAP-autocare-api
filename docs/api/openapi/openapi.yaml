@@ -1,0 +1,3436 @@
+openapi: 3.0.3
+info:
+  title: AutoCare Hub API
+  version: 1.0.0
+  description: >
+    API para gerenciamento de clientes, veículos, serviços, peças, ordens de
+    serviço, orçamentos, aprovações e acompanhamento de status de uma oficina
+    mecânica.
+servers:
+  - url: http://localhost:8080
+    description: Ambiente local
+security:
+  - bearerAuth: [ ]
+tags:
+  - name: Auth
+    description: Autenticação e emissão de token JWT
+  - name: Customers
+    description: Cadastro e manutenção de clientes
+  - name: Vehicles
+    description: Cadastro e manutenção de veículos
+  - name: Workshop Services
+    description: Cadastro e manutenção dos serviços oferecidos pela oficina
+  - name: Parts
+    description: Cadastro, manutenção e controle de estoque de peças e insumos
+  - name: Service Orders
+    description: Criação, composição, orçamento, aprovação e acompanhamento de ordens de serviço
+  - name: Users
+    description: Conta do usuário autenticado, funcionários, permissões e preferências de home
+  - name: Demo Leads
+    description: Registro publico e consulta administrativa de interessados em parceria
+paths:
+  /api/v1/auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Autentica um usuário
+      operationId: login
+      security: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              admin:
+                summary: Login administrativo para testar CRUDs e OS
+                value:
+                  username: admin@autocarehub.com
+                  password: autocare123
+              customer:
+                summary: Login de cliente para testar acompanhamento da própria OS
+                value:
+                  username: cliente@autocarehub.com
+                  password: autocare123
+      responses:
+        '200':
+          description: Login realizado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/customers:
+    post:
+      tags:
+        - Customers
+      summary: Cria um cliente
+      operationId: createCustomer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomerRequest'
+            examples:
+              pessoaFisica:
+                summary: Cliente pessoa física com CPF válido
+                value:
+                  name: Yasmin Barcelos
+                  document: '52998224725'
+                  phone: '11987654321'
+                  email: yasmin.cliente@example.com
+                  address:
+                    street: Avenida Paulista
+                    number: '1000'
+                    complement: Sala 10
+                    neighborhood: Bela Vista
+                    city: São Paulo
+                    state: SP
+                    zipCode: 01310-100
+              pessoaJuridica:
+                summary: Cliente empresa com CNPJ válido
+                value:
+                  name: Oficina Parceira Ltda
+                  document: '11222333000181'
+                  phone: '1133332222'
+                  email: contato@oficinaparceira.com.br
+                  address:
+                    street: Rua Vergueiro
+                    number: '1500'
+                    neighborhood: Vila Mariana
+                    city: São Paulo
+                    state: SP
+                    zipCode: 04101-000
+      responses:
+        '201':
+          description: Cliente criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags:
+        - Customers
+      summary: Lista clientes
+      operationId: listCustomers
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: active
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Clientes encontrados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/customers/{customerId}:
+    get:
+      tags:
+        - Customers
+      summary: Busca um cliente por id
+      operationId: getCustomerById
+      parameters:
+        - $ref: '#/components/parameters/CustomerIdPathParam'
+      responses:
+        '200':
+          description: Cliente encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+        - Customers
+      summary: Atualiza um cliente
+      operationId: updateCustomer
+      parameters:
+        - $ref: '#/components/parameters/CustomerIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCustomerRequest'
+            examples:
+              atualizarCliente:
+                summary: Atualiza cliente mantendo ativo
+                value:
+                  name: Mariana Costa
+                  document: '12345678909'
+                  phone: '11988887777'
+                  email: mariana.costa@example.com
+                  address:
+                    street: Rua das Oficinas
+                    number: '120'
+                    neighborhood: Centro
+                    city: São Paulo
+                    state: SP
+                    zipCode: 01001-000
+                  active: true
+      responses:
+        '200':
+          description: Cliente atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - Customers
+      summary: Remove logicamente um cliente
+      operationId: deleteCustomer
+      parameters:
+        - $ref: '#/components/parameters/CustomerIdPathParam'
+      responses:
+        '204':
+          description: Cliente removido
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/customers/{customerId}/vehicles:
+    get:
+      tags:
+        - Vehicles
+      summary: Lista veículos de um cliente
+      operationId: listVehiclesByCustomer
+      parameters:
+        - $ref: '#/components/parameters/CustomerIdPathParam'
+      responses:
+        '200':
+          description: Veículos encontrados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/customers/{customerId}/service-orders:
+    get:
+      tags:
+        - Service Orders
+      summary: Lista ordens de serviço de um cliente
+      operationId: listServiceOrdersByCustomer
+      parameters:
+        - $ref: '#/components/parameters/CustomerIdPathParam'
+      responses:
+        '200':
+          description: Ordens de serviço encontradas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceOrderListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/vehicles:
+    post:
+      tags:
+        - Vehicles
+      summary: Cria um veículo
+      operationId: createVehicle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVehicleRequest'
+            examples:
+              veiculoClienteSeed:
+                summary: Veículo novo vinculado a cliente existente
+                value:
+                  customerId: 10000000-0000-0000-0000-000000000001
+                  plate: TST1A23
+                  brand: Honda
+                  model: Civic Touring
+                  year: 2021
+                  mileage: 42000
+      responses:
+        '201':
+          description: Veículo criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    get:
+      tags:
+        - Vehicles
+      summary: Lista veículos
+      operationId: listVehicles
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: active
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Veículos encontrados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/vehicles/{vehicleId}:
+    get:
+      tags:
+        - Vehicles
+      summary: Busca um veículo por id
+      operationId: getVehicleById
+      parameters:
+        - $ref: '#/components/parameters/VehicleIdPathParam'
+      responses:
+        '200':
+          description: Veículo encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+        - Vehicles
+      summary: Atualiza um veículo
+      description: >
+        Atualiza quilometragem e status ativo do veículo. Para preservar histórico de OS, placa, marca, modelo e ano
+        devem permanecer iguais aos dados já cadastrados; se esses dados estiverem incorretos, inative o veículo e crie
+        um novo cadastro.
+      operationId: updateVehicle
+      parameters:
+        - $ref: '#/components/parameters/VehicleIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateVehicleRequest'
+            examples:
+              atualizarVeiculo:
+                summary: Atualiza veículo e mantém ativo
+                value:
+                  customerId: 10000000-0000-0000-0000-000000000001
+                  plate: TST1A23
+                  brand: Honda
+                  model: Civic Touring
+                  year: 2021
+                  mileage: 42500
+                  active: true
+      responses:
+        '200':
+          description: Veículo atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - Vehicles
+      summary: Remove logicamente um veículo
+      operationId: deleteVehicle
+      parameters:
+        - $ref: '#/components/parameters/VehicleIdPathParam'
+      responses:
+        '204':
+          description: Veículo removido
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/workshop-services:
+    post:
+      tags:
+        - Workshop Services
+      summary: Cria um serviço da oficina
+      operationId: createWorkshopService
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkshopServiceRequest'
+            examples:
+              diagnostico:
+                summary: Serviço de diagnóstico para catálogo da oficina
+                value:
+                  name: Diagnostico eletrico avancado
+                  description: Verificação de alternador, bateria, chicote e modulos eletronicos.
+                  basePrice: 250.00
+                  estimatedTimeInMinutes: 120
+      responses:
+        '201':
+          description: Serviço criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkshopServiceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags:
+        - Workshop Services
+      summary: Lista serviços da oficina
+      operationId: listWorkshopServices
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: active
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Serviços encontrados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkshopServiceListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/workshop-services/{serviceId}:
+    get:
+      tags:
+        - Workshop Services
+      summary: Busca um serviço da oficina por id
+      operationId: getWorkshopServiceById
+      parameters:
+        - $ref: '#/components/parameters/ServiceIdPathParam'
+      responses:
+        '200':
+          description: Serviço encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkshopServiceResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+        - Workshop Services
+      summary: Atualiza um serviço da oficina
+      operationId: updateWorkshopService
+      parameters:
+        - $ref: '#/components/parameters/ServiceIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkshopServiceRequest'
+            examples:
+              atualizarServico:
+                summary: Atualiza serviço mantendo ativo
+                value:
+                  name: Diagnostico eletrico avancado
+                  description: Verificação de alternador, bateria, chicote, fusivel e modulos eletronicos.
+                  basePrice: 280.00
+                  estimatedTimeInMinutes: 150
+                  active: true
+      responses:
+        '200':
+          description: Serviço atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkshopServiceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - Workshop Services
+      summary: Remove logicamente um serviço da oficina
+      operationId: deleteWorkshopService
+      parameters:
+        - $ref: '#/components/parameters/ServiceIdPathParam'
+      responses:
+        '204':
+          description: Serviço removido
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/parts:
+    post:
+      tags:
+        - Parts
+      summary: Cria uma peça ou insumo
+      operationId: createPart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePartRequest'
+            examples:
+              peca:
+                summary: Peça com estoque inicial
+                value:
+                  name: Sensor de oxigenio universal
+                  description: Sensor lambda universal para diagnostico de mistura ar-combustivel.
+                  sku: MOT-SEN-OXI01
+                  category: Motor
+                  subcategory: Injeção
+                  brand: Bosch
+                  unitPrice: 320.00
+                  costPrice: 210.00
+                  stockQuantity: 12
+                  minimumStock: 3
+      responses:
+        '201':
+          description: Peça criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags:
+        - Parts
+      summary: Lista peças e insumos
+      operationId: listParts
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: active
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: lowStock
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Peças encontradas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/parts/{partId}:
+    get:
+      tags:
+        - Parts
+      summary: Busca uma peça por id
+      operationId: getPartById
+      parameters:
+        - $ref: '#/components/parameters/PartIdPathParam'
+      responses:
+        '200':
+          description: Peça encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+        - Parts
+      summary: Atualiza uma peça ou insumo
+      operationId: updatePart
+      parameters:
+        - $ref: '#/components/parameters/PartIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePartRequest'
+            examples:
+              atualizarPeca:
+                summary: Atualiza peça mantendo ativa
+                value:
+                  name: Sensor de oxigenio universal
+                  description: Sensor lambda universal para diagnostico de mistura ar-combustivel.
+                  sku: MOT-SEN-OXI01
+                  category: Motor
+                  subcategory: Injeção
+                  brand: Bosch
+                  unitPrice: 340.00
+                  costPrice: 220.00
+                  stockQuantity: 12
+                  minimumStock: 3
+                  active: true
+      responses:
+        '200':
+          description: Peça atualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - Parts
+      summary: Remove logicamente uma peça ou insumo
+      operationId: deletePart
+      parameters:
+        - $ref: '#/components/parameters/PartIdPathParam'
+      responses:
+        '204':
+          description: Peça removida
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/parts/{partId}/stock:
+    patch:
+      tags:
+        - Parts
+      summary: Atualiza o estoque de uma peça ou insumo
+      operationId: updatePartStock
+      parameters:
+        - $ref: '#/components/parameters/PartIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePartStockRequest'
+            examples:
+              ajusteEstoque:
+                summary: Ajuste direto da quantidade total em estoque
+                value:
+                  stockQuantity: 25
+      responses:
+        '200':
+          description: Estoque atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/parts/{partId}/stock-movement:
+    patch:
+      tags:
+        - Parts
+      summary: Registra entrada, saída ou venda isolada de uma peça
+      operationId: registerStockMovement
+      parameters:
+        - $ref: '#/components/parameters/PartIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockMovementRequest'
+            examples:
+              entradaCompra:
+                summary: Entrada de compra de fornecedor
+                value:
+                  type: ENTRY
+                  quantity: 10
+                  unitCost: 210.00
+                  unitPrice: 320.00
+                  reason: Compra de reposição de estoque
+              saídaInterna:
+                summary: Saída manual de estoque
+                value:
+                  type: EXIT
+                  quantity: 1
+                  reason: Ajuste por perda operacional
+      responses:
+        '200':
+          description: Movimento registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/parts/{partId}/reservation:
+    patch:
+      tags:
+        - Parts
+      summary: Configura o prazo de reserva de estoque para orçamentos
+      operationId: configurePartReservation
+      parameters:
+        - $ref: '#/components/parameters/PartIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigurePartReservationRequest'
+            examples:
+              prazoReserva:
+                summary: Prazo de reserva usado em orçamentos
+                value:
+                  reservationDays: 3
+      responses:
+        '200':
+          description: Prazo de reserva configurado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/parts/{partId}/reserve:
+    patch:
+      tags:
+        - Parts
+      summary: Bloqueia quantidade de uma peça para um orçamento
+      operationId: reservePart
+      parameters:
+        - $ref: '#/components/parameters/PartIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartQuantityRequest'
+            examples:
+              reservar:
+                summary: Reserva quantidade para orçamento
+                value:
+                  quantity: 2
+      responses:
+        '200':
+          description: Estoque reservado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/parts/{partId}/release-reservation:
+    patch:
+      tags:
+        - Parts
+      summary: Libera quantidade previamente reservada
+      operationId: releaseReservation
+      parameters:
+        - $ref: '#/components/parameters/PartIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartQuantityRequest'
+            examples:
+              liberarReserva:
+                summary: Libera quantidade reservada
+                value:
+                  quantity: 1
+      responses:
+        '200':
+          description: Reserva liberada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/parts/{partId}/commit-reservation:
+    patch:
+      tags:
+        - Parts
+      summary: Converte reserva em baixa definitiva de estoque
+      operationId: commitReservation
+      parameters:
+        - $ref: '#/components/parameters/PartIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommitPartReservationRequest'
+            examples:
+              baixarReserva:
+                summary: Converte reserva em baixa de estoque
+                value:
+                  quantity: 1
+                  reason: Peca utilizada na execução da OS
+      responses:
+        '200':
+          description: Reserva baixada do estoque
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/service-orders:
+    post:
+      tags:
+        - Service Orders
+      summary: Cria uma ordem de serviço identificando o cliente por CPF ou CNPJ
+      description: >
+        Abre uma Ordem de Serviço recebendo dados do cliente, veículo, serviços e peças/insumos.
+        Retorna o identificador único da OS no campo `id`.
+      operationId: createServiceOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateServiceOrderRequest'
+            examples:
+              clienteVeiculoExistentes:
+                summary: OS para cliente e veículo já cadastrados
+                description: Use este exemplo depois de autenticar como admin. Ele já gera orçamento automaticamente.
+                value:
+                  customerDocument: '12345678909'
+                  vehicleId: 20000000-0000-0000-0000-000000000001
+                  diagnosticNotes: Cliente relata ruido ao frear e vibração no pedal.
+                  services:
+                    - serviceId: 30000000-0000-0000-0000-000000000004
+                      quantity: 1
+                  parts:
+                    - partId: 40000000-0000-0000-0000-000000000005
+                      quantity: 1
+                    - partId: 40000000-0000-0000-0000-000000000007
+                      quantity: 1
+                  generateBudget: true
+              clienteVeiculoNovos:
+                summary: OS cadastrando cliente e veículo no mesmo fluxo
+                description: Demonstra identificação por CPF/CNPJ, cadastro de veículo e geração automática de orçamento.
+                value:
+                  customerDocument: '52998224725'
+                  customer:
+                    name: Yasmin Barcelos
+                    phone: '11987654321'
+                    email: yasmin.cliente@example.com
+                    address:
+                      street: Avenida Paulista
+                      number: '1000'
+                      complement: Sala 10
+                      neighborhood: Bela Vista
+                      city: São Paulo
+                      state: SP
+                      zipCode: 01310-100
+                  vehicle:
+                    plate: TST1A23
+                    brand: Honda
+                    model: Civic Touring
+                    year: 2021
+                    mileage: 42000
+                  diagnosticNotes: Cliente solicita revisão preventiva antes de viagem.
+                  services:
+                    - serviceId: 30000000-0000-0000-0000-000000000003
+                      quantity: 1
+                  parts:
+                    - partId: 40000000-0000-0000-0000-000000000001
+                      quantity: 4
+                    - partId: 40000000-0000-0000-0000-000000000002
+                      quantity: 1
+                  generateBudget: true
+      responses:
+        '201':
+          description: Ordem de serviço criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceOrderResponse'
+              example:
+                id: 50000000-0000-0000-0000-000000000010
+                customerId: 10000000-0000-0000-0000-000000000001
+                vehicleId: 20000000-0000-0000-0000-000000000001
+                status: WAITING_APPROVAL
+                diagnosticNotes: Cliente relata ruido ao frear e vibração no pedal.
+                services:
+                  - serviceId: 30000000-0000-0000-0000-000000000004
+                    name: Diagnóstico de freios
+                    quantity: 1
+                    unitPrice: 180.0
+                    totalPrice: 180.0
+                parts:
+                  - partId: 40000000-0000-0000-0000-000000000005
+                    name: Pastilha de freio dianteira
+                    quantity: 1
+                    unitPrice: 220.0
+                    totalPrice: 220.0
+                servicesTotal: 180.0
+                partsTotal: 220.0
+                totalAmount: 400.0
+                createdAt: '2026-07-05T10:00:00-03:00'
+                budgetGeneratedAt: '2026-07-05T10:01:00-03:00'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    get:
+      tags:
+        - Service Orders
+      summary: Lista ordens de serviço
+      description: >
+        Lista a fila operacional de OS. Sem filtro de status, a listagem da Fase 2 retorna apenas OS abertas
+        ordenadas por prioridade/status: IN_PROGRESS, WAITING_APPROVAL, IN_DIAGNOSIS e RECEIVED.
+        Dentro do mesmo status, as mais antigas aparecem primeiro; FINISHED e DELIVERED não aparecem na fila.
+      operationId: listServiceOrders
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ServiceOrderStatus'
+        - name: customerId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: vehicleId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: createdFrom
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: createdTo
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Ordens de serviço encontradas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceOrderListResponse'
+              example:
+                items:
+                  - id: 50000000-0000-0000-0000-000000000020
+                    customerId: 10000000-0000-0000-0000-000000000001
+                    vehicleId: 20000000-0000-0000-0000-000000000001
+                    status: IN_PROGRESS
+                    diagnosticNotes: Serviço em execução.
+                    services: [ ]
+                    parts: [ ]
+                    servicesTotal: 0.0
+                    partsTotal: 0.0
+                    totalAmount: 0.0
+                    createdAt: '2026-07-05T08:00:00-03:00'
+                  - id: 50000000-0000-0000-0000-000000000021
+                    customerId: 10000000-0000-0000-0000-000000000002
+                    vehicleId: 20000000-0000-0000-0000-000000000002
+                    status: WAITING_APPROVAL
+                    diagnosticNotes: Aguardando aprovação do orçamento.
+                    services: [ ]
+                    parts: [ ]
+                    servicesTotal: 0.0
+                    partsTotal: 0.0
+                    totalAmount: 0.0
+                    createdAt: '2026-07-05T09:00:00-03:00'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/service-orders/metrics/average-execution-time:
+    get:
+      tags:
+        - Service Orders
+      summary: Consulta o tempo medio de execução das ordens de serviço finalizadas
+      operationId: getAverageServiceOrderExecutionTime
+      responses:
+        '200':
+          description: Tempo medio calculado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AverageExecutionTimeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/service-orders/tracking:
+    get:
+      tags:
+        - Service Orders
+      summary: Acompanha o progresso de ordens de serviço pelo cliente
+      description: Consulte por id da OS ou por CPF/CNPJ do cliente junto com a placa do veículo.
+      operationId: trackServiceOrders
+      parameters:
+        - name: serviceOrderId
+          in: query
+          required: false
+          example: 50000000-0000-0000-0000-000000000002
+          schema:
+            type: string
+            format: uuid
+        - name: customerDocument
+          in: query
+          required: false
+          example: '12345678909'
+          schema:
+            type: string
+            minLength: 11
+            maxLength: 18
+            pattern: "^\\d{11}$|^\\d{14}$|^\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}$|^\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}$"
+        - name: plate
+          in: query
+          required: false
+          example: MCA1D23
+          schema:
+            type: string
+            minLength: 7
+            maxLength: 8
+            pattern: '^[A-Za-z]{3}-?[0-9]{4}$|^[A-Za-z]{3}-?[0-9][A-Za-z][0-9]{2}$'
+      responses:
+        '200':
+          description: Progresso da ordem encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceOrderTrackingListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/service-orders/{serviceOrderId}:
+    get:
+      tags:
+        - Service Orders
+      summary: Busca uma ordem de serviço por id
+      description: Consulta os dados atuais da OS, incluindo o status atual.
+      operationId: getServiceOrderById
+      parameters:
+        - $ref: '#/components/parameters/ServiceOrderIdPathParam'
+      responses:
+        '200':
+          description: Ordem de serviço encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceOrderResponse'
+              example:
+                id: 50000000-0000-0000-0000-000000000002
+                customerId: 10000000-0000-0000-0000-000000000001
+                vehicleId: 20000000-0000-0000-0000-000000000001
+                status: WAITING_APPROVAL
+                diagnosticNotes: Cliente solicita revisão de freios.
+                services: [ ]
+                parts: [ ]
+                servicesTotal: 0.0
+                partsTotal: 0.0
+                totalAmount: 0.0
+                createdAt: '2026-07-05T10:00:00-03:00'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/service-orders/{serviceOrderId}/services:
+    post:
+      tags:
+        - Service Orders
+      summary: Adiciona um serviço a uma ordem de serviço
+      operationId: addServiceToServiceOrder
+      parameters:
+        - $ref: '#/components/parameters/ServiceOrderIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddServiceOrderServiceRequest'
+            examples:
+              adicionarServico:
+                summary: Inclui serviço solicitado na OS
+                value:
+                  serviceId: 30000000-0000-0000-0000-000000000005
+                  quantity: 1
+      responses:
+        '200':
+          description: Serviço adicionado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceOrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/service-orders/{serviceOrderId}/parts:
+    post:
+      tags:
+        - Service Orders
+      summary: Adiciona uma peça a uma ordem de serviço
+      operationId: addPartToServiceOrder
+      parameters:
+        - $ref: '#/components/parameters/ServiceOrderIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddServiceOrderPartRequest'
+            examples:
+              adicionarPeca:
+                summary: Inclui peça ou insumo na OS
+                value:
+                  partId: 40000000-0000-0000-0000-000000000005
+                  quantity: 1
+      responses:
+        '200':
+          description: Peça adicionada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceOrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/service-orders/{serviceOrderId}/budget/generate:
+    post:
+      tags:
+        - Service Orders
+      summary: Gera o orçamento de uma ordem de serviço
+      operationId: generateServiceOrderBudget
+      parameters:
+        - $ref: '#/components/parameters/ServiceOrderIdPathParam'
+      responses:
+        '200':
+          description: Orçamento gerado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceOrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/service-orders/{serviceOrderId}/budget/approve:
+    post:
+      tags:
+        - Service Orders
+      summary: Aprova o orçamento de uma ordem de serviço
+      description: Aprova o orçamento existente e move a OS para execução quando as regras de negócio permitirem.
+      operationId: approveServiceOrderBudget
+      parameters:
+        - $ref: '#/components/parameters/ServiceOrderIdPathParam'
+      responses:
+        '200':
+          description: Orçamento aprovado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceOrderResponse'
+              example:
+                id: 50000000-0000-0000-0000-000000000002
+                customerId: 10000000-0000-0000-0000-000000000001
+                vehicleId: 20000000-0000-0000-0000-000000000001
+                status: WAITING_APPROVAL
+                diagnosticNotes: Cliente solicita revisão de freios.
+                services: [ ]
+                parts: [ ]
+                servicesTotal: 0.0
+                partsTotal: 0.0
+                totalAmount: 0.0
+                createdAt: '2026-07-05T10:00:00-03:00'
+                approvedAt: '2026-07-05T10:10:00-03:00'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/service-orders/{serviceOrderId}/budget/decision:
+    post:
+      tags:
+        - Service Orders
+      summary: Recebe decisão externa de aprovação ou recusa do orçamento
+      description: >
+        Endpoint demonstrável para simular uma notificação externa, como email, aprovando ou recusando o orçamento.
+        Não exige login de usuário. Exige o header X-External-Service-Token com o valor configurado em EXTERNAL_SERVICE_TOKEN.
+        Quando aprovado, confirma a reserva de peças. Quando recusado, libera reservas e retorna a OS para diagnóstico.
+      operationId: decideServiceOrderBudget
+      security: [ ]
+      parameters:
+        - $ref: '#/components/parameters/ServiceOrderIdPathParam'
+        - $ref: '#/components/parameters/ExternalServiceTokenHeaderParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExternalBudgetDecisionRequest'
+            examples:
+              aprovarPorEmail:
+                summary: Aprovação simulada por email
+                value:
+                  decision: APPROVED
+                  source: email
+                  reason: Cliente aprovou o orçamento pelo link de notificação.
+              recusarPorEmail:
+                summary: Recusa simulada por email
+                value:
+                  decision: REJECTED
+                  source: email
+                  reason: Cliente recusou o orçamento e solicitou revisão.
+      responses:
+        '200':
+          description: Decisão registrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceOrderResponse'
+              examples:
+                aprovado:
+                  summary: Orçamento aprovado por notificação externa
+                  value:
+                    id: 50000000-0000-0000-0000-000000000002
+                    customerId: 10000000-0000-0000-0000-000000000001
+                    vehicleId: 20000000-0000-0000-0000-000000000001
+                    status: WAITING_APPROVAL
+                    diagnosticNotes: Cliente solicita revisão de freios.
+                    services: [ ]
+                    parts: [ ]
+                    servicesTotal: 0.0
+                    partsTotal: 0.0
+                    totalAmount: 0.0
+                    createdAt: '2026-07-05T10:00:00-03:00'
+                    approvedAt: '2026-07-05T10:12:00-03:00'
+                recusado:
+                  summary: Orçamento recusado por notificação externa
+                  value:
+                    id: 50000000-0000-0000-0000-000000000002
+                    customerId: 10000000-0000-0000-0000-000000000001
+                    vehicleId: 20000000-0000-0000-0000-000000000001
+                    status: IN_DIAGNOSIS
+                    diagnosticNotes: Cliente solicita revisão de freios.
+                    services: [ ]
+                    parts: [ ]
+                    servicesTotal: 0.0
+                    partsTotal: 0.0
+                    totalAmount: 0.0
+                    createdAt: '2026-07-05T10:00:00-03:00'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/service-orders/{serviceOrderId}/budget/external-approval:
+    post:
+      tags:
+        - Service Orders
+      summary: Recebe aprovação externa do orçamento
+      description: >
+        Webhook demonstrável para registrar aprovação de orçamento recebida por uma ferramenta externa,
+        como email. Não exige login de usuário. Exige o header X-External-Service-Token e usa as mesmas regras
+        de domínio do fluxo principal de aprovação.
+      operationId: approveServiceOrderBudgetFromExternalTool
+      security: [ ]
+      parameters:
+        - $ref: '#/components/parameters/ServiceOrderIdPathParam'
+        - $ref: '#/components/parameters/ExternalServiceTokenHeaderParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExternalBudgetNotificationRequest'
+            examples:
+              aprovarPorEmail:
+                summary: Aprovação recebida por email
+                value:
+                  source: email
+                  reason: Cliente aprovou o orçamento pelo link de notificação.
+      responses:
+        '200':
+          description: Aprovação externa registrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceOrderResponse'
+              example:
+                id: 50000000-0000-0000-0000-000000000002
+                customerId: 10000000-0000-0000-0000-000000000001
+                vehicleId: 20000000-0000-0000-0000-000000000001
+                status: WAITING_APPROVAL
+                diagnosticNotes: Cliente solicita revisão de freios.
+                services: [ ]
+                parts: [ ]
+                servicesTotal: 0.0
+                partsTotal: 0.0
+                totalAmount: 0.0
+                createdAt: '2026-07-05T10:00:00-03:00'
+                approvedAt: '2026-07-05T10:12:00-03:00'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/service-orders/{serviceOrderId}/budget/external-rejection:
+    post:
+      tags:
+        - Service Orders
+      summary: Recebe recusa externa do orçamento
+      description: >
+        Webhook demonstrável para registrar recusa de orçamento recebida por uma ferramenta externa,
+        como email. Não exige login de usuário. Exige o header X-External-Service-Token. A recusa libera reservas e retorna a OS
+        para diagnóstico sem remover a OS.
+      operationId: rejectServiceOrderBudgetFromExternalTool
+      security: [ ]
+      parameters:
+        - $ref: '#/components/parameters/ServiceOrderIdPathParam'
+        - $ref: '#/components/parameters/ExternalServiceTokenHeaderParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExternalBudgetNotificationRequest'
+            examples:
+              recusarPorEmail:
+                summary: Recusa recebida por email
+                value:
+                  source: email
+                  reason: Cliente recusou o orçamento e solicitou revisão.
+      responses:
+        '200':
+          description: Recusa externa registrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceOrderResponse'
+              example:
+                id: 50000000-0000-0000-0000-000000000002
+                customerId: 10000000-0000-0000-0000-000000000001
+                vehicleId: 20000000-0000-0000-0000-000000000001
+                status: IN_DIAGNOSIS
+                diagnosticNotes: Cliente solicita revisão de freios.
+                services: [ ]
+                parts: [ ]
+                servicesTotal: 0.0
+                partsTotal: 0.0
+                totalAmount: 0.0
+                createdAt: '2026-07-05T10:00:00-03:00'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/service-orders/{serviceOrderId}/status:
+    patch:
+      tags:
+        - Service Orders
+      summary: Atualiza o status de uma ordem de serviço
+      operationId: updateServiceOrderStatus
+      parameters:
+        - $ref: '#/components/parameters/ServiceOrderIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateServiceOrderStatusRequest'
+            examples:
+              iniciarDiagnostico:
+                summary: Muda de Recebida para Em diagnóstico
+                value:
+                  status: IN_DIAGNOSIS
+              iniciarExecução:
+                summary: Muda para Em execução após aprovação do orçamento
+                value:
+                  status: IN_PROGRESS
+              finalizar:
+                summary: Finaliza a execução da OS
+                value:
+                  status: FINISHED
+              entregar:
+                summary: Marca o veículo como entregue ao cliente
+                value:
+                  status: DELIVERED
+      responses:
+        '200':
+          description: Status atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceOrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/service-orders/{serviceOrderId}/status/external:
+    post:
+      tags:
+        - Service Orders
+      summary: Recebe atualização externa de status da ordem de serviço
+      description: >
+        Endpoint demonstrável para simular uma ferramenta externa, como email, notificando mudança de status da OS.
+        Não exige login de usuário. Exige o header X-External-Service-Token. A transição usa as mesmas regras de negócio do fluxo principal.
+      operationId: updateServiceOrderStatusFromExternalTool
+      security: [ ]
+      parameters:
+        - $ref: '#/components/parameters/ServiceOrderIdPathParam'
+        - $ref: '#/components/parameters/ExternalServiceTokenHeaderParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExternalStatusUpdateRequest'
+            examples:
+              emailFinalização:
+                summary: Finalização recebida por ferramenta externa
+                value:
+                  status: FINISHED
+                  source: email
+                  message: Mecânico informou finalização pelo fluxo externo.
+      responses:
+        '200':
+          description: Status atualizado pela notificação externa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceOrderResponse'
+              example:
+                id: 50000000-0000-0000-0000-000000000002
+                customerId: 10000000-0000-0000-0000-000000000001
+                vehicleId: 20000000-0000-0000-0000-000000000001
+                status: FINISHED
+                diagnosticNotes: Cliente solicita revisão de freios.
+                services: [ ]
+                parts: [ ]
+                servicesTotal: 0.0
+                partsTotal: 0.0
+                totalAmount: 0.0
+                createdAt: '2026-07-05T10:00:00-03:00'
+                finishedAt: '2026-07-05T16:00:00-03:00'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/users/me:
+    get:
+      tags:
+        - Users
+      summary: Consulta os dados do usuário autenticado
+      description: Retorna perfil, empresa, permissões e status da conta vinculada ao Bearer Token JWT.
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Usuário autenticado encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              example:
+                id: '00000000-0000-0000-0000-000000000001'
+                username: admin@autocarehub.com
+                role: ADMIN
+                profileType: MASTER_ADMIN
+                fullName: Marina AutoCare Hub
+                permissions:
+                  - VIEW_STATS
+                active: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags:
+        - Users
+      summary: Atualiza os dados básicos do usuário autenticado
+      description: Permite ao usuário logado alterar o próprio nome exibido no sistema.
+      operationId: updateCurrentUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCurrentUserRequest'
+            example:
+              fullName: Maria AutoCare Hub
+      responses:
+        '200':
+          description: Usuário atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/v1/users/me/password:
+    patch:
+      tags:
+        - Users
+      summary: Altera a senha do usuário autenticado
+      description: Valida a senha atual e define uma nova senha para a conta logada.
+      operationId: changeCurrentPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+            example:
+              currentPassword: 'autocare123'
+              newPassword: novaSenha123
+      responses:
+        '204':
+          description: Senha alterada
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/v1/users/me/preferences/home:
+    get:
+      tags:
+        - Users
+      summary: Consulta preferências da home do usuário
+      description: Retorna os widgets visíveis e a preferência de exibir alertas na home.
+      operationId: getHomePreference
+      responses:
+        '200':
+          description: Preferência encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomePreferenceResponse'
+              example:
+                widgets:
+                  - orders-progress
+                  - services-catalog
+                showAlertsOnHome: false
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags:
+        - Users
+      summary: Salva as preferências da home do usuário
+      description: Persiste no backend os widgets escolhidos para a home do usuário autenticado.
+      operationId: saveHomePreference
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HomePreferenceRequest'
+            example:
+              widgets:
+                - orders-progress
+                - active-customers
+                - vehicles-in-service
+              showAlertsOnHome: true
+      responses:
+        '200':
+          description: Preferência salva
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomePreferenceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/v1/users:
+    get:
+      tags:
+        - Users
+      summary: Lista contas de usuário
+      description: >
+        Endpoint administrativo para listar usuários por status, role, perfil ou termo de busca.
+        Requer Bearer Token JWT de administrador.
+      operationId: listUsers
+      parameters:
+        - name: active
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: role
+          in: query
+          required: false
+          schema:
+            type: string
+            example: ADMIN
+        - name: profileType
+          in: query
+          required: false
+          schema:
+            type: string
+            example: WORKSHOP_ADMIN
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 120
+      responses:
+        '200':
+          description: Usuários encontrados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags:
+        - Users
+      summary: Cria uma conta de usuário
+      description: >
+        Endpoint administrativo para criar administradores, funcionários ou clientes vinculados ao sistema.
+        Requer Bearer Token JWT de administrador. IDs de usuário e de empresa nova são gerados pelo backend.
+        Para vincular uma conta a empresa existente, consulte antes `GET /api/v1/users/companies` e use a empresa selecionada.
+        Para criar uma empresa nova, envie `createCompany: true`, `companyName` e `companyType`, sem informar `companyId`.
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+            examples:
+              funcionarioEmpresaExistente:
+                summary: Funcionário em empresa existente selecionada
+                value:
+                  username: mecanico@example.com
+                  password: 'autocare123'
+                  role: EMPLOYEE
+                  fullName: Carlos Oficina
+                  profileType: WORKSHOP_EMPLOYEE
+                  companyId: 90000000-0000-0000-0000-000000000011
+                  companyName: Oficina Central AutoCare
+                  companyType: WORKSHOP
+                  createCompany: false
+                  employeeSubRole: MECHANIC
+                  permissions:
+                    - CREATE_ORDER
+                    - EDIT_ORDER
+                  active: true
+              adminNovaEmpresa:
+                summary: Admin Master criando nova oficina sem informar id
+                value:
+                  username: nova.oficina@example.com
+                  password: 'autocare123'
+                  role: ADMIN
+                  fullName: Ana Oficina
+                  profileType: WORKSHOP_ADMIN
+                  companyName: Oficina Nova AutoCare
+                  companyType: WORKSHOP
+                  createCompany: true
+                  employeeSubRole: ''
+                  permissions:
+                    - VIEW_BILLING
+                    - MANAGE_STOCK
+                    - CREATE_BUDGET
+                    - EDIT_EMPLOYEES
+                    - VIEW_STATS
+                  active: true
+      responses:
+        '201':
+          description: Usuário criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/v1/users/partners:
+    get:
+      tags:
+        - Users
+      summary: Lista parceiros ativos
+      description: Lista oficinas e lojas de peças cadastradas como parceiros ativos para uso na area do cliente final.
+      operationId: listPartners
+      responses:
+        '200':
+          description: Parceiros encontrados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/v1/users/companies:
+    get:
+      tags:
+        - Users
+      summary: Lista empresas disponíveis para vínculo de usuários
+      description: >
+        Endpoint administrativo usado no cadastro de contas. Admin Master visualiza todas as empresas.
+        Admin de oficina ou loja visualiza somente a própria empresa.
+      operationId: listCompaniesForUsers
+      responses:
+        '200':
+          description: Empresas encontradas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyListResponse'
+              example:
+                items:
+                  - id: 90000000-0000-0000-0000-000000000001
+                    name: AutoCare Hub
+                    type: PLATFORM
+                    active: true
+                  - id: 90000000-0000-0000-0000-000000000011
+                    name: Oficina Central AutoCare
+                    type: WORKSHOP
+                    active: true
+                  - id: 90000000-0000-0000-0000-000000000012
+                    name: Loja peças Prime
+                    type: PARTS_STORE
+                    active: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/v1/users/{userId}:
+    put:
+      tags:
+        - Users
+      summary: Atualiza uma conta de usuário
+      description: Endpoint administrativo para editar dados, perfil, subrole, permissões e status ativo de uma conta.
+      operationId: updateUser
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: Usuário atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/v1/users/{userId}/password:
+    patch:
+      tags:
+        - Users
+      summary: Redefine a senha de uma conta
+      description: >
+        Endpoint administrativo para definir nova senha inicial ou resetar senha de funcionário, cliente ou parceiro.
+      operationId: resetUserPassword
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '204':
+          description: Senha redefinida
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/v1/demo-leads:
+    post:
+      tags:
+        - Demo Leads
+      summary: Registra interesse em parceria
+      description: >
+        Endpoint publico usado pela pagina de parceiros para registrar oficinas ou lojas interessadas em demonstração.
+      operationId: registerDemoLead
+      security: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DemoLeadRequest'
+            example:
+              contactName: Ana Oficina
+              companyName: Oficina Central AutoCare
+              demoProfile: workshop
+              email: ana@example.com
+              phone: '11999999999'
+              cnpj: '11.222.333/0001-81'
+              city: Sao Paulo
+              message: Quero conhecer a plataforma.
+      responses:
+        '201':
+          description: Interesse registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DemoLeadResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      tags:
+        - Demo Leads
+      summary: Lista interessados em parceria
+      description: >
+        Endpoint administrativo para Admin Master acompanhar interessados, contatos e parceiros potenciais.
+        Requer Bearer Token JWT de administrador.
+      operationId: listDemoLeads
+      responses:
+        '200':
+          description: Interessados encontrados
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DemoLeadResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    SizeParam:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    CustomerIdPathParam:
+      name: customerId
+      in: path
+      required: true
+      example: 10000000-0000-0000-0000-000000000001
+      schema:
+        type: string
+        format: uuid
+    VehicleIdPathParam:
+      name: vehicleId
+      in: path
+      required: true
+      example: 20000000-0000-0000-0000-000000000001
+      schema:
+        type: string
+        format: uuid
+    ServiceIdPathParam:
+      name: serviceId
+      in: path
+      required: true
+      example: 30000000-0000-0000-0000-000000000004
+      schema:
+        type: string
+        format: uuid
+    PartIdPathParam:
+      name: partId
+      in: path
+      required: true
+      example: 40000000-0000-0000-0000-000000000005
+      schema:
+        type: string
+        format: uuid
+    ServiceOrderIdPathParam:
+      name: serviceOrderId
+      in: path
+      required: true
+      example: 50000000-0000-0000-0000-000000000002
+      schema:
+        type: string
+        format: uuid
+    ExternalServiceTokenHeaderParam:
+      name: X-External-Service-Token
+      in: header
+      required: true
+      description: Token compartilhado configurado em `EXTERNAL_SERVICE_TOKEN` para webhooks externos simulados.
+      schema:
+        type: string
+        minLength: 1
+  responses:
+    BadRequest:
+      description: Requisição invalida
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: '2026-06-20T17:00:00-03:00'
+            status: 400
+            error: Bad Request
+            message: Invalid request body
+            path: /api/v1/service-orders
+            details:
+              - customerDocument: must not be blank
+    Unauthorized:
+      description: Credenciais ausentes ou invalidas
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: '2026-06-20T17:00:00-03:00'
+            status: 401
+            error: Unauthorized
+            message: Missing or invalid credentials
+            path: /api/v1/customers
+            details: [ ]
+    Forbidden:
+      description: Usuário autenticado sem permissão para acessar o recurso, ou token externo ausente/invalido nos webhooks simulados
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: '2026-06-20T17:00:00-03:00'
+            status: 403
+            error: Forbidden
+            message: Access denied
+            path: /api/v1/customers
+            details: [ ]
+    NotFound:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: '2026-06-20T17:00:00-03:00'
+            status: 404
+            error: Not Found
+            message: Resource not found
+            path: /api/v1/customers/00000000-0000-0000-0000-000000000000
+            details: [ ]
+    Conflict:
+      description: Conflito com estado atual do recurso, como duplicidade de documento, placa, usuário ou SKU
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: '2026-06-20T17:00:00-03:00'
+            status: 409
+            error: Conflict
+            message: Resource already exists
+            path: /api/v1/customers
+            details: [ ]
+    InternalServerError:
+      description: Erro interno inesperado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: '2026-06-20T17:00:00-03:00'
+            status: 500
+            error: Internal Server Error
+            message: Unexpected error
+            path: /api/v1/service-orders
+            details: [ ]
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 120
+          example: admin@autocarehub.com
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+          format: password
+          example: 'autocare123'
+    LoginResponse:
+      type: object
+      required:
+        - accessToken
+        - tokenType
+        - expiresIn
+      properties:
+        accessToken:
+          type: string
+          minLength: 1
+        tokenType:
+          type: string
+          example: Bearer
+        expiresIn:
+          type: integer
+          format: int64
+          minimum: 1
+          example: 3600
+    Address:
+      type: object
+      required:
+        - street
+        - number
+        - neighborhood
+        - city
+        - state
+        - zipCode
+      properties:
+        street:
+          type: string
+          minLength: 2
+          maxLength: 120
+          example: Avenida Paulista
+        number:
+          type: string
+          minLength: 1
+          maxLength: 20
+          example: '1000'
+        complement:
+          type: string
+          maxLength: 80
+          example: Sala 10
+        neighborhood:
+          type: string
+          minLength: 2
+          maxLength: 80
+          example: Bela Vista
+        city:
+          type: string
+          minLength: 2
+          maxLength: 80
+          example: Sao Paulo
+        state:
+          type: string
+          minLength: 2
+          maxLength: 2
+          example: SP
+        zipCode:
+          type: string
+          minLength: 8
+          maxLength: 9
+          pattern: "^\\d{5}-?\\d{3}$"
+          example: 01310-100
+    CreateCustomerRequest:
+      type: object
+      required:
+        - name
+        - document
+        - phone
+        - email
+        - address
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        document:
+          type: string
+          minLength: 11
+          maxLength: 18
+          pattern: "^\\d{11}$|^\\d{14}$|^\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}$|^\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}$"
+          description: CPF ou CNPJ com ou sem formatação.
+        phone:
+          type: string
+          minLength: 10
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          maxLength: 120
+        address:
+          $ref: '#/components/schemas/Address'
+    UpdateCustomerRequest:
+      allOf:
+        - $ref: '#/components/schemas/CreateCustomerRequest'
+        - type: object
+          required:
+            - active
+          properties:
+            active:
+              type: boolean
+    CustomerResponse:
+      type: object
+      required:
+        - id
+        - name
+        - document
+        - phone
+        - email
+        - address
+        - active
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        document:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+        address:
+          $ref: '#/components/schemas/Address'
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+    CustomerListResponse:
+      type: object
+      required:
+        - items
+        - page
+        - size
+        - totalItems
+        - totalPages
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerResponse'
+        page:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 1
+        totalItems:
+          type: integer
+          format: int64
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+    CreateVehicleRequest:
+      type: object
+      required:
+        - customerId
+        - plate
+        - brand
+        - model
+        - year
+        - mileage
+      properties:
+        customerId:
+          type: string
+          format: uuid
+        plate:
+          type: string
+          minLength: 7
+          maxLength: 8
+          pattern: '^[A-Za-z]{3}-?[0-9]{4}$|^[A-Za-z]{3}-?[0-9][A-Za-z][0-9]{2}$'
+          example: ABC1D23
+        brand:
+          type: string
+          minLength: 2
+          maxLength: 60
+        model:
+          type: string
+          minLength: 1
+          maxLength: 80
+        year:
+          type: integer
+          minimum: 1900
+          maximum: 2100
+        mileage:
+          type: integer
+          minimum: 0
+    UpdateVehicleRequest:
+      description: >
+        Payload completo mantido por compatibilidade com o formulário administrativo. Em atualização, `plate`, `brand`,
+        `model` e `year` devem repetir os dados atuais do veículo; somente `mileage` e `active` são mutáveis.
+      allOf:
+        - $ref: '#/components/schemas/CreateVehicleRequest'
+        - type: object
+          required:
+            - active
+          properties:
+            active:
+              type: boolean
+    VehicleResponse:
+      type: object
+      required:
+        - id
+        - customerId
+        - plate
+        - brand
+        - model
+        - year
+        - mileage
+        - active
+      properties:
+        id:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        plate:
+          type: string
+        brand:
+          type: string
+        model:
+          type: string
+        year:
+          type: integer
+        mileage:
+          type: integer
+        active:
+          type: boolean
+    VehicleListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/VehicleResponse'
+    CreateWorkshopServiceRequest:
+      type: object
+      required:
+        - name
+        - description
+        - basePrice
+        - estimatedTimeInMinutes
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        description:
+          type: string
+          minLength: 5
+          maxLength: 500
+        basePrice:
+          type: number
+          format: double
+          minimum: 0
+        estimatedTimeInMinutes:
+          type: integer
+          minimum: 1
+    UpdateWorkshopServiceRequest:
+      allOf:
+        - $ref: '#/components/schemas/CreateWorkshopServiceRequest'
+        - type: object
+          required:
+            - active
+          properties:
+            active:
+              type: boolean
+    WorkshopServiceResponse:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - basePrice
+        - estimatedTimeInMinutes
+        - active
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        basePrice:
+          type: number
+          format: double
+        estimatedTimeInMinutes:
+          type: integer
+        active:
+          type: boolean
+    WorkshopServiceListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkshopServiceResponse'
+    CreatePartRequest:
+      type: object
+      required:
+        - name
+        - description
+        - sku
+        - category
+        - brand
+        - unitPrice
+        - stockQuantity
+        - minimumStock
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        description:
+          type: string
+          minLength: 3
+          maxLength: 500
+        sku:
+          type: string
+          minLength: 3
+          maxLength: 60
+        category:
+          type: string
+          minLength: 2
+          maxLength: 80
+        subcategory:
+          type: string
+          maxLength: 80
+        brand:
+          type: string
+          minLength: 2
+          maxLength: 80
+        unitPrice:
+          type: number
+          format: double
+          minimum: 0
+        costPrice:
+          type: number
+          format: double
+          minimum: 0
+        stockQuantity:
+          type: integer
+          minimum: 0
+        minimumStock:
+          type: integer
+          minimum: 0
+    UpdatePartRequest:
+      allOf:
+        - $ref: '#/components/schemas/CreatePartRequest'
+        - type: object
+          required:
+            - active
+          properties:
+            active:
+              type: boolean
+    UpdatePartStockRequest:
+      type: object
+      required:
+        - stockQuantity
+      properties:
+        stockQuantity:
+          type: integer
+          minimum: 0
+    StockMovementRequest:
+      type: object
+      required:
+        - type
+        - quantity
+      properties:
+        type:
+          type: string
+          enum:
+            - ENTRY
+            - EXIT
+            - SALE
+        quantity:
+          type: integer
+          minimum: 1
+        unitCost:
+          type: number
+          format: double
+          minimum: 0
+        unitPrice:
+          type: number
+          format: double
+          minimum: 0
+        reason:
+          type: string
+          maxLength: 255
+    ConfigurePartReservationRequest:
+      type: object
+      required:
+        - reservationDays
+      properties:
+        reservationDays:
+          type: integer
+          minimum: 1
+    PartQuantityRequest:
+      type: object
+      required:
+        - quantity
+      properties:
+        quantity:
+          type: integer
+          minimum: 1
+    CommitPartReservationRequest:
+      allOf:
+        - $ref: '#/components/schemas/PartQuantityRequest'
+        - type: object
+          properties:
+            reason:
+              type: string
+              maxLength: 255
+    PartResponse:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - sku
+        - category
+        - brand
+        - unitPrice
+        - costPrice
+        - stockQuantity
+        - reservedQuantity
+        - minimumStock
+        - stockStatus
+        - active
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        sku:
+          type: string
+        category:
+          type: string
+        subcategory:
+          type: string
+        brand:
+          type: string
+        unitPrice:
+          type: number
+          format: double
+        costPrice:
+          type: number
+          format: double
+        stockQuantity:
+          type: integer
+        reservedQuantity:
+          type: integer
+        availableQuantity:
+          type: integer
+        minimumStock:
+          type: integer
+        reservationDays:
+          type: integer
+        reservationExpiresAt:
+          type: string
+          format: date-time
+        stockStatus:
+          type: string
+        active:
+          type: boolean
+    PartListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartResponse'
+    CreateServiceOrderRequest:
+      type: object
+      required:
+        - customerDocument
+        - diagnosticNotes
+        - services
+      properties:
+        customerDocument:
+          type: string
+          minLength: 11
+          maxLength: 18
+          pattern: "^\\d{11}$|^\\d{14}$|^\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}$|^\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}$"
+          example: '12345678909'
+          description: CPF ou CNPJ do cliente com ou sem formatação. Se o cliente não existir, informe tambem customer.
+        customer:
+          $ref: '#/components/schemas/CreateServiceOrderCustomerRequest'
+        vehicleId:
+          type: string
+          format: uuid
+          description: >
+            Identificador de veículo ja cadastrado.
+            Se ausente, informe vehicle para cadastro ou vinculo por placa.
+        vehicle:
+          $ref: '#/components/schemas/CreateServiceOrderVehicleRequest'
+        diagnosticNotes:
+          type: string
+          minLength: 5
+          maxLength: 2000
+        services:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CreateServiceOrderServiceRequest'
+          description: Serviços solicitados para compor automáticamente o orçamento.
+        parts:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateServiceOrderPartRequest'
+          description: Peças ou insumos necessários para compor automáticamente o orçamento.
+        generateBudget:
+          type: boolean
+          default: true
+          description: Quando true, gera o orçamento automáticamente e deixa a OS aguardando aprovação.
+    CreateServiceOrderCustomerRequest:
+      type: object
+      required:
+        - name
+        - phone
+        - email
+        - address
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        phone:
+          type: string
+          minLength: 10
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          maxLength: 120
+        address:
+          $ref: '#/components/schemas/Address'
+    CreateServiceOrderVehicleRequest:
+      type: object
+      required:
+        - plate
+        - brand
+        - model
+        - year
+      properties:
+        plate:
+          type: string
+          minLength: 7
+          maxLength: 8
+          pattern: '^[A-Za-z]{3}-?[0-9]{4}$|^[A-Za-z]{3}-?[0-9][A-Za-z][0-9]{2}$'
+          example: ABC1D23
+        brand:
+          type: string
+          minLength: 2
+          maxLength: 60
+          example: Honda
+        model:
+          type: string
+          minLength: 1
+          maxLength: 80
+          example: Civic
+        year:
+          type: integer
+          minimum: 1900
+          example: 2020
+        mileage:
+          type: integer
+          minimum: 0
+          default: 0
+          example: 35000
+    CreateServiceOrderServiceRequest:
+      type: object
+      required:
+        - serviceId
+        - quantity
+      properties:
+        serviceId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+          default: 1
+    CreateServiceOrderPartRequest:
+      type: object
+      required:
+        - partId
+        - quantity
+      properties:
+        partId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+          default: 1
+    AddServiceOrderServiceRequest:
+      type: object
+      required:
+        - serviceId
+        - quantity
+      properties:
+        serviceId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+    AddServiceOrderPartRequest:
+      type: object
+      required:
+        - partId
+        - quantity
+      properties:
+        partId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+    UpdateServiceOrderStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/ServiceOrderStatus'
+    ExternalBudgetDecisionRequest:
+      type: object
+      required:
+        - decision
+        - source
+      properties:
+        decision:
+          type: string
+          enum:
+            - APPROVED
+            - REJECTED
+        source:
+          type: string
+          minLength: 2
+          maxLength: 60
+          example: email
+        reason:
+          type: string
+          maxLength: 500
+          example: Cliente respondeu a notificação externa.
+    ExternalBudgetNotificationRequest:
+      type: object
+      required:
+        - source
+      properties:
+        source:
+          type: string
+          minLength: 2
+          maxLength: 60
+          example: email
+        reason:
+          type: string
+          maxLength: 500
+          example: Cliente respondeu a notificação externa.
+    ExternalStatusUpdateRequest:
+      type: object
+      required:
+        - status
+        - source
+      properties:
+        status:
+          $ref: '#/components/schemas/ServiceOrderStatus'
+        source:
+          type: string
+          minLength: 2
+          maxLength: 60
+          example: email
+        message:
+          type: string
+          maxLength: 500
+          example: Atualização recebida pela ferramenta externa.
+    ServiceOrderServiceItem:
+      type: object
+      required:
+        - serviceId
+        - name
+        - quantity
+        - unitPrice
+        - totalPrice
+      properties:
+        serviceId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+        unitPrice:
+          type: number
+          format: double
+          minimum: 0
+        totalPrice:
+          type: number
+          format: double
+          minimum: 0
+    ServiceOrderPartItem:
+      type: object
+      required:
+        - partId
+        - name
+        - sku
+        - quantity
+        - unitPrice
+        - totalPrice
+      properties:
+        partId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        sku:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+        unitPrice:
+          type: number
+          format: double
+          minimum: 0
+        totalPrice:
+          type: number
+          format: double
+          minimum: 0
+    ServiceOrderResponse:
+      type: object
+      required:
+        - id
+        - customerId
+        - vehicleId
+        - status
+        - diagnosticNotes
+        - services
+        - parts
+        - servicesTotal
+        - partsTotal
+        - totalAmount
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        vehicleId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/ServiceOrderStatus'
+        diagnosticNotes:
+          type: string
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceOrderServiceItem'
+        parts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceOrderPartItem'
+        servicesTotal:
+          type: number
+          format: double
+          minimum: 0
+          description: Valor total dos serviços do orçamento.
+        partsTotal:
+          type: number
+          format: double
+          minimum: 0
+          description: Valor total das peças e insumos do orçamento.
+        totalAmount:
+          type: number
+          format: double
+          minimum: 0
+          description: Valor total geral do orçamento.
+        createdAt:
+          type: string
+          format: date-time
+        budgetGeneratedAt:
+          type: string
+          format: date-time
+        approvedAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time
+        deliveredAt:
+          type: string
+          format: date-time
+    ServiceOrderListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceOrderResponse'
+    ServiceOrderTrackingListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceOrderTrackingResponse'
+    ServiceOrderTrackingResponse:
+      type: object
+      required:
+        - id
+        - customerId
+        - vehicle
+        - status
+        - diagnosticNotes
+        - services
+        - parts
+        - budget
+        - statusHistory
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        vehicle:
+          $ref: '#/components/schemas/VehicleResponse'
+        status:
+          $ref: '#/components/schemas/ServiceOrderTrackingStatus'
+        diagnosticNotes:
+          type: string
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceOrderServiceItem'
+        parts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceOrderPartItem'
+        budget:
+          $ref: '#/components/schemas/ServiceOrderBudgetTrackingResponse'
+        statusHistory:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceOrderStatusHistoryItem'
+        createdAt:
+          type: string
+          format: date-time
+    ServiceOrderBudgetTrackingResponse:
+      type: object
+      required:
+        - generated
+        - approved
+        - servicesTotal
+        - partsTotal
+        - totalAmount
+      properties:
+        generated:
+          type: boolean
+        approved:
+          type: boolean
+        servicesTotal:
+          type: number
+          format: double
+          minimum: 0
+        partsTotal:
+          type: number
+          format: double
+          minimum: 0
+        totalAmount:
+          type: number
+          format: double
+          minimum: 0
+        generatedAt:
+          type: string
+          format: date-time
+        approvedAt:
+          type: string
+          format: date-time
+    ServiceOrderStatusHistoryItem:
+      type: object
+      required:
+        - status
+        - occurredAt
+        - description
+      properties:
+        status:
+          $ref: '#/components/schemas/ServiceOrderTrackingStatus'
+        occurredAt:
+          type: string
+          format: date-time
+        description:
+          type: string
+    AverageExecutionTimeResponse:
+      type: object
+      required:
+        - completedOrders
+        - averageExecutionTimeInMinutes
+      properties:
+        completedOrders:
+          type: integer
+          format: int64
+          minimum: 0
+        averageExecutionTimeInMinutes:
+          type: number
+          format: double
+          minimum: 0
+    UserResponse:
+      type: object
+      required:
+        - id
+        - username
+        - role
+        - fullName
+        - profileType
+        - permissions
+        - active
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+          format: email
+          maxLength: 120
+        role:
+          type: string
+          example: ADMIN
+        customerId:
+          type: string
+          format: uuid
+        companyId:
+          type: string
+          format: uuid
+          description: Use somente para vincular a uma empresa existente retornada por GET /api/v1/users/companies. Não informe ao criar uma nova empresa.
+        fullName:
+          type: string
+          maxLength: 160
+        profileType:
+          type: string
+          example: WORKSHOP_ADMIN
+        companyName:
+          type: string
+          maxLength: 160
+        companyType:
+          type: string
+          example: workshop
+        employeeSubRole:
+          type: string
+          example: MECHANIC
+        permissions:
+          type: array
+          items:
+            type: string
+          example:
+            - CREATE_ORDER
+            - EDIT_ORDER
+            - MANAGE_STOCK
+        active:
+          type: boolean
+    CompanyResponse:
+      type: object
+      required:
+        - id
+        - name
+        - type
+        - active
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 160
+          example: Oficina Central AutoCare
+        type:
+          type: string
+          enum:
+            - PLATFORM
+            - WORKSHOP
+            - PARTS_STORE
+          example: WORKSHOP
+        active:
+          type: boolean
+    CompanyListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CompanyResponse'
+    UserListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserResponse'
+    CreateUserRequest:
+      type: object
+      required:
+        - username
+        - password
+        - role
+        - fullName
+        - profileType
+        - active
+      properties:
+        username:
+          type: string
+          format: email
+          maxLength: 120
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 72
+        role:
+          type: string
+          enum:
+            - ADMIN
+            - EMPLOYEE
+            - CUSTOMER
+        customerId:
+          type: string
+          format: uuid
+        companyId:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 160
+        profileType:
+          type: string
+          example: WORKSHOP_EMPLOYEE
+        companyName:
+          type: string
+          maxLength: 160
+        companyType:
+          type: string
+          enum:
+            - PLATFORM
+            - WORKSHOP
+            - PARTS_STORE
+          example: WORKSHOP
+        createCompany:
+          type: boolean
+          default: false
+          description: Quando true, o backend cria a empresa e gera o companyId automaticamente.
+        employeeSubRole:
+          type: string
+          example: MECHANIC
+        permissions:
+          type: array
+          items:
+            type: string
+        active:
+          type: boolean
+    UpdateUserRequest:
+      type: object
+      required:
+        - username
+        - role
+        - fullName
+        - profileType
+        - active
+      properties:
+        username:
+          type: string
+          format: email
+          maxLength: 120
+        role:
+          type: string
+          enum:
+            - ADMIN
+            - EMPLOYEE
+            - CUSTOMER
+        customerId:
+          type: string
+          format: uuid
+        companyId:
+          type: string
+          format: uuid
+          description: Use somente para manter ou trocar o vínculo para uma empresa existente. Não é preenchido manualmente para empresa nova.
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 160
+        profileType:
+          type: string
+          example: WORKSHOP_EMPLOYEE
+        companyName:
+          type: string
+          maxLength: 160
+        companyType:
+          type: string
+          enum:
+            - PLATFORM
+            - WORKSHOP
+            - PARTS_STORE
+          example: WORKSHOP
+        createCompany:
+          type: boolean
+          default: false
+          description: Quando true, o backend cria a empresa e gera o companyId automaticamente.
+        employeeSubRole:
+          type: string
+          example: MECHANIC
+        permissions:
+          type: array
+          items:
+            type: string
+        active:
+          type: boolean
+    UpdateCurrentUserRequest:
+      type: object
+      required:
+        - fullName
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 160
+    ChangePasswordRequest:
+      type: object
+      required:
+        - currentPassword
+        - newPassword
+      properties:
+        currentPassword:
+          type: string
+          format: password
+          minLength: 1
+          maxLength: 72
+        newPassword:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 72
+    ResetPasswordRequest:
+      type: object
+      required:
+        - newPassword
+      properties:
+        newPassword:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 72
+    HomePreferenceRequest:
+      type: object
+      required:
+        - widgets
+        - showAlertsOnHome
+      properties:
+        widgets:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        showAlertsOnHome:
+          type: boolean
+    HomePreferenceResponse:
+      allOf:
+        - $ref: '#/components/schemas/HomePreferenceRequest'
+    DemoLeadRequest:
+      type: object
+      required:
+        - contactName
+        - companyName
+        - demoProfile
+        - email
+        - phone
+        - cnpj
+      properties:
+        contactName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        companyName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        demoProfile:
+          type: string
+          enum:
+            - workshop
+            - partsStore
+        email:
+          type: string
+          format: email
+          maxLength: 160
+        phone:
+          type: string
+          minLength: 8
+          maxLength: 30
+        cnpj:
+          type: string
+          minLength: 6
+          maxLength: 40
+          pattern: '^[A-Za-z0-9./-]+$'
+        city:
+          type: string
+          maxLength: 120
+        message:
+          type: string
+          maxLength: 500
+    DemoLeadResponse:
+      allOf:
+        - $ref: '#/components/schemas/DemoLeadRequest'
+        - type: object
+          required:
+            - id
+            - createdAt
+          properties:
+            id:
+              type: string
+              format: uuid
+            createdAt:
+              type: string
+              format: date-time
+    ServiceOrderStatus:
+      type: string
+      enum:
+        - RECEIVED
+        - IN_DIAGNOSIS
+        - WAITING_APPROVAL
+        - IN_PROGRESS
+        - FINISHED
+        - DELIVERED
+    ServiceOrderTrackingStatus:
+      type: string
+      enum:
+        - RECEBIDA
+        - EM_DIAGNOSTICO
+        - AGUARDANDO_APROVACAO
+        - EM_EXECUCAO
+        - FINALIZADA
+        - ENTREGUE
+    ErrorResponse:
+      type: object
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          minimum: 100
+          maximum: 599
+        error:
+          type: string
+          minLength: 1
+        message:
+          type: string
+          minLength: 1
+        path:
+          type: string
+          minLength: 1
+        details:
+          type: array
+          items:
+            type: string

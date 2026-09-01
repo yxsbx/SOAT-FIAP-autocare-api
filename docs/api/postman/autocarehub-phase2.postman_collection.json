@@ -1,0 +1,129 @@
+{
+  "info": {
+    "name": "AutoCare Hub - Fase 2",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "serviceOrderId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\":\"admin@autocarehub.com\",\"password\":\"autocare123\"}"
+        }
+      }
+    },
+    {
+      "name": "Abrir OS",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/service-orders",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"customerDocument\":\"12345678909\",\"vehicleId\":\"20000000-0000-0000-0000-000000000001\",\"diagnosticNotes\":\"Cliente relata ruido ao frear.\",\"services\":[{\"serviceId\":\"30000000-0000-0000-0000-000000000004\",\"quantity\":1}],\"parts\":[{\"partId\":\"40000000-0000-0000-0000-000000000005\",\"quantity\":1}],\"generateBudget\":true}"
+        }
+      }
+    },
+    {
+      "name": "Consultar OS",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/service-orders/{{serviceOrderId}}"
+      }
+    },
+    {
+      "name": "Decisão externa do orcamento",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/service-orders/{{serviceOrderId}}/budget/decision",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"decision\":\"APPROVED\",\"source\":\"email\",\"reason\":\"Cliente aprovou por notificação externa.\"}"
+        }
+      }
+    },
+    {
+      "name": "Atualização externa de status",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/service-orders/{{serviceOrderId}}/status/external",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"status\":\"IN_PROGRESS\",\"source\":\"email\",\"message\":\"Atualização externa demonstrável.\"}"
+        }
+      }
+    },
+    {
+      "name": "Listar fila de OS",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/service-orders?page=0&size=10"
+      }
+    }
+  ]
+}
+

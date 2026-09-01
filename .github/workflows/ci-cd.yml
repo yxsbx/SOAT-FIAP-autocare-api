@@ -1,0 +1,49 @@
+name: API CI/CD
+
+on:
+  push:
+    branches: [fase-3, homolog, main]
+  pull_request:
+    branches: [fase-3, homolog, main]
+  workflow_dispatch:
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Test and verify
+        run: mvn -B verify
+      - name: Build image
+        run: docker build -t autocarehub-api:${{ github.sha }} .
+
+  deploy:
+    if: github.event_name == 'push' && (github.ref_name == 'homolog' || github.ref_name == 'main')
+    needs: test-build
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'production' || 'homolog' }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and push image
+        run: |
+          docker build -t ${{ secrets.ECR_REGISTRY }}/autocarehub-api:${{ github.sha }} .
+          docker push ${{ secrets.ECR_REGISTRY }}/autocarehub-api:${{ github.sha }}
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }} --region ${{ secrets.AWS_REGION }}
+      - name: Deploy API
+        run: |
+          kubectl -n autocarehub set image deployment/autocarehub-api api=${{ secrets.ECR_REGISTRY }}/autocarehub-api:${{ github.sha }}
+          kubectl -n autocarehub rollout status deployment/autocarehub-api --timeout=180s

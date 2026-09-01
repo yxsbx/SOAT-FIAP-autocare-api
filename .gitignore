@@ -1,0 +1,112 @@
+# Local media captures
+video/*.mp4
+video/*.mov
+video/*.mkv
+video/*.webm
+video/*.avi
+
+# Maven
+target/
+
+# Local reports generated outside the final evidence folder
+coverage/
+logs/
+.allure/
+allure-results/
+*.lcov
+*.tmp
+*.temp
+*.bak
+*.orig
+*.swp
+*.swo
+
+# Local database dumps
+dumps/
+*.dump
+*.sql.gz
+*.sql.bak
+*.backup
+
+# OpenAPI Generator output
+**/generated-sources/
+**/.openapi-generator/
+**/.openapi-generator-ignore
+
+# Java
+*.class
+*.jar
+*.war
+*.nar
+*.ear
+*.log
+hs_err_pid*
+replay_pid*
+!.mvn/wrapper/maven-wrapper.jar
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+.sts4-cache/
+/.agents/
+/.codex/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local environment
+.env
+.env.*
+!.env.example
+.envrc
+*.local
+.m2-test/
+
+# Local keys, certificates and kubeconfig files
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+kubeconfig
+kubeconfig.*
+*.kubeconfig
+
+# Terraform local state and secrets
+**/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+terraform.tfvars
+terraform.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
+*.tfplan
+
+# Build output
+build/
+bin/
+node_modules/
+dist/
+frontend/node_modules/
+frontend/dist/
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# Legacy Java tooling
+*.ctxt
+.mtj.tmp/
