@@ -1,6 +1,19 @@
 # AutoCare Hub API
 
-Aplicacao principal backend do AutoCare Hub, responsavel por clientes, veiculos, pecas, usuarios e ordens de servico.
+Aplicacao principal backend do AutoCare Hub. Este repositorio contem a API Spring Boot responsavel por clientes, veiculos, pecas, usuarios, ordens de servico, orcamentos, estoque, seguranca e metricas de negocio.
+
+## Papel na Arquitetura
+
+A API roda em Kubernetes/EKS, recebe chamadas do API Gateway em `/api/*`, valida JWTs internos e JWTs emitidos pela Lambda de CPF, acessa o RDS PostgreSQL e envia telemetria para o New Relic.
+
+```mermaid
+flowchart LR
+  Web[Web] --> Gateway[API Gateway]
+  Gateway --> API[Spring Boot API - EKS]
+  Lambda[Auth Lambda] --> RDS[(RDS PostgreSQL)]
+  API --> RDS
+  API --> NR[New Relic APM/Logs/Metrics]
+```
 
 ## Tecnologias
 
@@ -8,34 +21,46 @@ Aplicacao principal backend do AutoCare Hub, responsavel por clientes, veiculos,
 - Spring Boot
 - Spring Security JWT
 - Spring Data JPA
-- PostgreSQL/RDS
 - Flyway
-- Maven
+- PostgreSQL/RDS
+- Micrometer/Actuator
+- New Relic Java Agent
 - Docker
 - Kubernetes/EKS
-- New Relic Java Agent, APM, logs e metricas
+- GitHub Actions
 
 ## Autenticacao
 
-A API aceita dois tipos de JWT assinados com o mesmo `JWT_SECRET`:
+A API aceita dois fluxos de JWT assinados com o mesmo `JWT_SECRET`:
 
-- JWT interno emitido por `/api/v1/auth/login` para administradores e funcionarios.
-- JWT externo emitido pela Lambda `SOAT-FIAP-autocare-auth-lambda` no fluxo `POST /auth/cpf`.
+- Interno: `POST /api/v1/auth/login`, usado por administradores e funcionarios.
+- Cliente: `POST /auth/cpf`, emitido pela Lambda do repositorio `SOAT-FIAP-autocare-auth-lambda`.
 
-O token da Lambda deve conter `role=CUSTOMER` e `customerId`; a API monta um principal de cliente e aplica as regras de acesso ja existentes.
+Para tokens da Lambda, a API espera claims `role=CUSTOMER`, `customerId` e `document`. Quando o usuario nao existe na tabela local de usuarios, o filtro JWT cria um principal temporario de cliente e aplica as regras de autorizacao existentes.
 
 ## Observabilidade
 
 - Healthchecks: `/actuator/health`, `/actuator/health/liveness`, `/actuator/health/readiness`.
-- Metricas: `/actuator/metrics` e metricas customizadas `autocare.service_orders.*`.
-- Logs: JSON no stdout com `correlationId` vindo de `X-Correlation-Id` ou gerado automaticamente.
-- APM: New Relic Java Agent embarcado no Dockerfile. Configure `NEW_RELIC_LICENSE_KEY` e `NEW_RELIC_APP_NAME`.
+- Metricas: `/actuator/metrics` e `autocare.service_orders.*`.
+- Logs: JSON no stdout com `correlationId` vindo de `X-Correlation-Id`.
+- APM: New Relic Java Agent embarcado no Dockerfile.
 
-## Execucao local
+## Execucao Local
 
 ```powershell
 mvn test
 mvn spring-boot:run
+```
+
+Variaveis locais principais:
+
+```env
+DB_URL=jdbc:postgresql://localhost:5432/autocarehub
+DB_USERNAME=autocarehub
+DB_PASSWORD=autocarehub
+JWT_SECRET=troque-por-um-segredo-com-pelo-menos-32-bytes
+NEW_RELIC_LICENSE_KEY=
+NEW_RELIC_APP_NAME=AutoCare Hub API
 ```
 
 ## Build Docker
@@ -44,11 +69,11 @@ mvn spring-boot:run
 docker build -t autocarehub-api:local .
 ```
 
-## Deploy
+## CI/CD
 
-A pipeline executa testes em Pull Requests e publica imagem no ECR com deploy automatico em `homolog` e `main`.
+A pipeline executa testes em PRs e publica imagem no ECR com deploy automatico em `homolog` e `main`.
 
-Secrets esperados:
+Secrets esperados no GitHub:
 
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
@@ -57,18 +82,22 @@ Secrets esperados:
 - `EKS_CLUSTER_NAME`
 - `NEW_RELIC_LICENSE_KEY`
 
-## APIs
+## Swagger/Postman
 
-- Swagger/OpenAPI local: `docs/api/openapi/openapi.yaml`
-- Swagger via API Gateway: `https://<api-gateway-id>.execute-api.<region>.amazonaws.com/openapi.yaml`
+- Swagger local: `http://localhost:8080/swagger-ui/index.html`
+- Swagger via API Gateway: `https://<api-gateway-id>.execute-api.<region>.amazonaws.com/api/swagger-ui/index.html`
+- OpenAPI: `docs/api/openapi/openapi.yaml`
 - Postman: `docs/api/postman/autocarehub-phase2.postman_collection.json`
 
-## Arquitetura especifica
+## Documentacao Arquitetural
 
-```mermaid
-flowchart LR
-  Client[Cliente/Frontend] --> Gateway[API Gateway]
-  Gateway --> API[AutoCare Hub API - EKS]
-  API --> DB[(RDS PostgreSQL)]
-  API --> NR[New Relic APM/Logs]
-```
+- Componentes cloud: `docs/architecture/cloud-components.md`
+- Sequencias: `docs/architecture/sequences.md`
+- RFC AWS: `docs/rfc/RFC-001-aws.md`
+- RFC PostgreSQL/RDS: `docs/rfc/RFC-002-postgresql-rds.md`
+- RFC CPF + JWT: `docs/rfc/RFC-003-cpf-jwt-auth.md`
+- ADR EKS: `docs/adr/ADR-001-eks.md`
+- ADR HPA: `docs/adr/ADR-002-hpa.md`
+- ADR New Relic: `docs/adr/ADR-003-new-relic.md`
+- Modelo ER e indices: `docs/database/er-model.md`
+- Documento final: `docs/delivery/fase-3-entrega.md` e `docs/delivery/fase-3-entrega.pdf`
